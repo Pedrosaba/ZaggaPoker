@@ -13,6 +13,7 @@
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -435,6 +436,31 @@
             background: rgba(255, 255, 255, 0.5);
         }
 
+        #positionHistoryTable table {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #positionHistoryTable th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        #positionHistoryTable td {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        #positionHistoryTable tr:last-child td {
+            border-bottom: none;
+        }
+
+        #positionHistoryTable tr:hover {
+            background: #e7f3ff !important;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -468,6 +494,20 @@
             #resultsSection > div > .grid-2 {
                 grid-template-columns: 1fr;
             }
+
+            #performanceChart {
+                max-height: 300px !important;
+            }
+
+            #positionHistoryTable {
+                font-size: 0.8em;
+            }
+
+            #positionHistoryTable th,
+            #positionHistoryTable td {
+                padding: 6px !important;
+                min-width: 60px;
+            }
         }
     </style>
 </head>
@@ -479,6 +519,7 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('newGame')">New Game</button>
             <button class="tab" onclick="switchTab('rankings')">Yearly Rankings</button>
+            <button class="tab" onclick="switchTab('statistics')">Statistics</button>
             <button class="tab" onclick="switchTab('history')">Game History</button>
             <button class="tab" onclick="switchTab('players')">Regular Players</button>
         </div>
@@ -595,10 +636,43 @@
                     <strong>Rankings:</strong> Based on cumulative profit/loss across all games this year (game results only - excluding entry fees and tips).
                 </div>
 
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-primary" onclick="exportRankingsToExcel()">📊 Export Rankings to Excel</button>
+                </div>
+
                 <div id="rankingsList"></div>
 
                 <div style="margin-top: 20px; text-align: center;">
                     <button class="btn btn-warning" onclick="clearHistory()">Clear All History</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATISTICS TAB -->
+        <div id="statisticsTab" class="tab-content">
+            <div class="section">
+                <h2>Performance Statistics</h2>
+                
+                <div class="alert alert-info">
+                    <strong>Visual Analytics:</strong> Track player performance trends throughout the year.
+                </div>
+
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <button class="btn btn-success" onclick="exportToExcel()">📊 Export All Data to Excel</button>
+                </div>
+
+                <div id="chartContainer" style="margin-bottom: 30px;">
+                    <canvas id="performanceChart" style="max-height: 400px;"></canvas>
+                </div>
+
+                <div id="statsGrid" class="stat-grid"></div>
+
+                <div class="section" style="margin-top: 30px;">
+                    <h3 style="color: #495057; margin-bottom: 20px;">📊 Position History</h3>
+                    <div class="alert alert-info">
+                        <strong>Track:</strong> See how rankings changed after each game throughout the year.
+                    </div>
+                    <div id="positionHistoryTable" style="overflow-x: auto;"></div>
                 </div>
             </div>
         </div>
@@ -610,6 +684,10 @@
                 
                 <div class="alert alert-info">
                     <strong>View:</strong> All recorded games for the current year.
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-primary" onclick="exportHistoryToExcel()">📊 Export History to Excel</button>
                 </div>
 
                 <div id="historyList"></div>
@@ -670,13 +748,17 @@
                 document.getElementById('rankingsTab').classList.add('active');
                 document.querySelectorAll('.tab')[1].classList.add('active');
                 loadRankings();
+            } else if (tabName === 'statistics') {
+                document.getElementById('statisticsTab').classList.add('active');
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                loadStatistics();
             } else if (tabName === 'history') {
                 document.getElementById('historyTab').classList.add('active');
-                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.querySelectorAll('.tab')[3].classList.add('active');
                 loadHistory();
             } else if (tabName === 'players') {
                 document.getElementById('playersTab').classList.add('active');
-                document.querySelectorAll('.tab')[3].classList.add('active');
+                document.querySelectorAll('.tab')[4].classList.add('active');
                 renderRegularPlayers();
             }
         }
@@ -1416,6 +1498,509 @@
             document.getElementById('tableLeader').value = '';
             document.getElementById('gameDate').valueAsDate = new Date();
             updateChipDistribution();
+        }
+
+        // Statistics and Charts
+        let performanceChart = null;
+
+        function loadStatistics() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            
+            const yearGames = games.filter(game => {
+                const gameYear = new Date(game.date).getFullYear();
+                return gameYear === currentYear;
+            }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (yearGames.length === 0) {
+                document.getElementById('chartContainer').innerHTML = '<div class="alert alert-info">No games recorded yet. Play some games to see statistics!</div>';
+                document.getElementById('statsGrid').innerHTML = '';
+                return;
+            }
+
+            // Calculate cumulative performance over time
+            const playerCumulative = {};
+            const gameLabels = [];
+            
+            yearGames.forEach((game, index) => {
+                const gameDate = new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                gameLabels.push(gameDate);
+                
+                game.settlements.forEach(settlement => {
+                    if (!playerCumulative[settlement.name]) {
+                        playerCumulative[settlement.name] = {
+                            data: new Array(index).fill(0),
+                            total: 0
+                        };
+                    }
+                    playerCumulative[settlement.name].total += settlement.netProfit;
+                    playerCumulative[settlement.name].data.push(playerCumulative[settlement.name].total);
+                });
+                
+                // Fill forward for players who didn't play this game
+                Object.keys(playerCumulative).forEach(playerName => {
+                    if (playerCumulative[playerName].data.length < index + 1) {
+                        const lastValue = playerCumulative[playerName].data[playerCumulative[playerName].data.length - 1] || 0;
+                        playerCumulative[playerName].data.push(lastValue);
+                    }
+                });
+            });
+
+            // Generate colors for each player
+            const colors = [
+                '#667eea', '#764ba2', '#f093fb', '#4facfe', 
+                '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+                '#a8edea', '#fed6e3', '#c471ed', '#12c2e9'
+            ];
+
+            const datasets = Object.keys(playerCumulative).map((playerName, index) => ({
+                label: playerName,
+                data: playerCumulative[playerName].data,
+                borderColor: colors[index % colors.length],
+                backgroundColor: colors[index % colors.length] + '20',
+                tension: 0.4,
+                fill: false,
+                borderWidth: 3
+            }));
+
+            // Create or update chart
+            const ctx = document.getElementById('performanceChart');
+            if (ctx) {
+                if (performanceChart) {
+                    performanceChart.destroy();
+                }
+                
+                performanceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: gameLabels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Cumulative Performance Over Time',
+                                font: { size: 18, weight: 'bold' }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value;
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Cumulative Profit/Loss'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Game Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Display overall statistics
+            displayOverallStats(yearGames);
+        }
+
+        function displayOverallStats(games) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            // Calculate stats
+            const totalGames = games.length;
+            const totalChipsInPlay = games.reduce((sum, g) => {
+                return sum + g.settlements.reduce((s, settlement) => s + settlement.chipsPurchased, 0);
+            }, 0);
+            const totalEntryFees = games.reduce((sum, g) => sum + (g.entryFee * g.settlements.length), 0);
+            const totalTips = games.reduce((sum, g) => sum + (g.dealerTips || 0), 0);
+            const avgGameSize = totalChipsInPlay / totalGames;
+            
+            // Most frequent players
+            const playerGames = {};
+            games.forEach(game => {
+                game.settlements.forEach(s => {
+                    playerGames[s.name] = (playerGames[s.name] || 0) + 1;
+                });
+            });
+            const mostFrequent = Object.entries(playerGames).sort((a, b) => b[1] - a[1])[0];
+
+            // Player who purchased the most chips
+            const playerChipsPurchased = {};
+            games.forEach(game => {
+                game.settlements.forEach(s => {
+                    playerChipsPurchased[s.name] = (playerChipsPurchased[s.name] || 0) + s.chipsPurchased;
+                });
+            });
+            const biggestSpender = Object.entries(playerChipsPurchased).sort((a, b) => b[1] - a[1])[0];
+
+            // Calculate longest time at #1
+            const leadershipStats = calculateLeadershipStreak(games);
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Total Games</div>
+                    <div class="stat-value">${totalGames}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Chips Played</div>
+                    <div class="stat-value">$${totalChipsInPlay.toFixed(0)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Game Size</div>
+                    <div class="stat-value">$${avgGameSize.toFixed(0)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Entry Fees</div>
+                    <div class="stat-value">$${totalEntryFees.toFixed(2)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Tips</div>
+                    <div class="stat-value">$${totalTips.toFixed(2)}</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #ffc107;">
+                    <div class="stat-label">Most Active Player</div>
+                    <div class="stat-value" style="font-size: 1.2em;">${mostFrequent ? mostFrequent[0] : 'N/A'}</div>
+                    <div class="stat-label" style="margin-top: 5px;">${mostFrequent ? mostFrequent[1] + ' games' : ''}</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #28a745;">
+                    <div class="stat-label">Longest at #1</div>
+                    <div class="stat-value" style="font-size: 1.2em;">${leadershipStats.leader || 'N/A'}</div>
+                    <div class="stat-label" style="margin-top: 5px;">${leadershipStats.games || 0} games</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #dc3545;">
+                    <div class="stat-label">Biggest Spender</div>
+                    <div class="stat-value" style="font-size: 1.2em;">${biggestSpender ? biggestSpender[0] : 'N/A'}</div>
+                    <div class="stat-label" style="margin-top: 5px;">$${biggestSpender ? biggestSpender[1].toFixed(0) : '0'} total</div>
+                </div>
+            `;
+
+            // Display position history table
+            displayPositionHistory(games);
+        }
+
+        function calculateLeadershipStreak(games) {
+            const leadershipCount = {};
+            let currentLeader = null;
+            let currentStreak = 0;
+            const longestStreaks = {};
+            
+            // Calculate cumulative standings after each game
+            const playerCumulative = {};
+            
+            games.forEach((game, index) => {
+                // Update cumulative totals
+                game.settlements.forEach(settlement => {
+                    if (!playerCumulative[settlement.name]) {
+                        playerCumulative[settlement.name] = 0;
+                    }
+                    playerCumulative[settlement.name] += settlement.netProfit;
+                });
+                
+                // Find leader after this game
+                const leader = Object.entries(playerCumulative)
+                    .sort((a, b) => b[1] - a[1])[0];
+                
+                if (leader) {
+                    const leaderName = leader[0];
+                    leadershipCount[leaderName] = (leadershipCount[leaderName] || 0) + 1;
+                    
+                    // Track consecutive leadership
+                    if (currentLeader === leaderName) {
+                        currentStreak++;
+                    } else {
+                        currentLeader = leaderName;
+                        currentStreak = 1;
+                    }
+                    
+                    longestStreaks[leaderName] = Math.max(
+                        longestStreaks[leaderName] || 0,
+                        currentStreak
+                    );
+                }
+            });
+            
+            // Find player with most games at #1
+            const longestLeader = Object.entries(leadershipCount)
+                .sort((a, b) => b[1] - a[1])[0];
+            
+            return {
+                leader: longestLeader ? longestLeader[0] : null,
+                games: longestLeader ? longestLeader[1] : 0
+            };
+        }
+
+        function displayPositionHistory(games) {
+            const positionHistoryDiv = document.getElementById('positionHistoryTable');
+            
+            if (games.length === 0) {
+                positionHistoryDiv.innerHTML = '';
+                return;
+            }
+            
+            // Calculate rankings after each game
+            const playerCumulative = {};
+            const rankingsHistory = [];
+            
+            games.forEach((game, index) => {
+                // Update cumulative totals
+                game.settlements.forEach(settlement => {
+                    if (!playerCumulative[settlement.name]) {
+                        playerCumulative[settlement.name] = 0;
+                    }
+                    playerCumulative[settlement.name] += settlement.netProfit;
+                });
+                
+                // Get rankings after this game
+                const rankings = Object.entries(playerCumulative)
+                    .sort((a, b) => b[1] - a[1])
+                    .map((entry, rank) => ({
+                        name: entry[0],
+                        profit: entry[1],
+                        rank: rank + 1
+                    }));
+                
+                const gameDate = new Date(game.date).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                
+                rankingsHistory.push({
+                    date: gameDate,
+                    gameNumber: index + 1,
+                    rankings: rankings
+                });
+            });
+            
+            // Build table
+            const allPlayers = [...new Set(games.flatMap(g => g.settlements.map(s => s.name)))];
+            
+            let tableHTML = '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
+            tableHTML += '<thead><tr style="background: #667eea; color: white;">';
+            tableHTML += '<th style="padding: 10px; text-align: left; position: sticky; left: 0; background: #667eea;">Game</th>';
+            
+            allPlayers.forEach(player => {
+                tableHTML += `<th style="padding: 10px; text-align: center; min-width: 80px;">${player}</th>`;
+            });
+            
+            tableHTML += '</tr></thead><tbody>';
+            
+            rankingsHistory.forEach((history, idx) => {
+                const rowColor = idx % 2 === 0 ? '#f8f9fa' : 'white';
+                tableHTML += `<tr style="background: ${rowColor};">`;
+                tableHTML += `<td style="padding: 10px; font-weight: bold; position: sticky; left: 0; background: ${rowColor}; border-right: 2px solid #dee2e6;">#${history.gameNumber}<br/><span style="font-size: 0.85em; color: #6c757d;">${history.date}</span></td>`;
+                
+                allPlayers.forEach(player => {
+                    const playerRanking = history.rankings.find(r => r.name === player);
+                    
+                    if (playerRanking) {
+                        let bgColor = '';
+                        let medal = '';
+                        
+                        if (playerRanking.rank === 1) {
+                            bgColor = '#ffd70020';
+                            medal = '🥇 ';
+                        } else if (playerRanking.rank === 2) {
+                            bgColor = '#c0c0c020';
+                            medal = '🥈 ';
+                        } else if (playerRanking.rank === 3) {
+                            bgColor = '#cd7f3220';
+                            medal = '🥉 ';
+                        }
+                        
+                        const profitColor = playerRanking.profit >= 0 ? '#28a745' : '#dc3545';
+                        
+                        tableHTML += `<td style="padding: 10px; text-align: center; background: ${bgColor};">`;
+                        tableHTML += `${medal}#${playerRanking.rank}<br/>`;
+                        tableHTML += `<span style="font-size: 0.85em; color: ${profitColor}; font-weight: bold;">$${playerRanking.profit.toFixed(0)}</span>`;
+                        tableHTML += `</td>`;
+                    } else {
+                        tableHTML += '<td style="padding: 10px; text-align: center; color: #adb5bd;">-</td>';
+                    }
+                });
+                
+                tableHTML += '</tr>';
+            });
+            
+            tableHTML += '</tbody></table>';
+            
+            positionHistoryDiv.innerHTML = tableHTML;
+        }
+
+        // Excel Export Functions
+        function exportToExcel() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            const yearGames = games.filter(game => new Date(game.date).getFullYear() === currentYear);
+
+            if (yearGames.length === 0) {
+                alert('No games to export');
+                return;
+            }
+
+            // Prepare data
+            let csv = 'Zagga Poker - Complete Data Export\n\n';
+            csv += 'GAME HISTORY\n';
+            csv += 'Date,Table Leader,Dealer,Entry Fee,Tips,Player,Chips Bought,Final Chips,Profit/Loss\n';
+
+            yearGames.forEach(game => {
+                const gameDate = new Date(game.date).toLocaleDateString();
+                game.settlements.forEach(settlement => {
+                    csv += `${gameDate},${game.tableLeader},${game.dealerName || game.tableLeader},${game.entryFee},${game.dealerTips || 0},${settlement.name},${settlement.chipsPurchased},${settlement.finalChips},${settlement.netProfit}\n`;
+                });
+            });
+
+            csv += '\n\nYEARLY RANKINGS\n';
+            csv += 'Rank,Player,Total Profit/Loss,Games Played,Average per Game,Total Chips Purchased\n';
+
+            const playerStats = {};
+            const playerChipsPurchased = {};
+            
+            yearGames.forEach(game => {
+                game.settlements.forEach(settlement => {
+                    if (!playerStats[settlement.name]) {
+                        playerStats[settlement.name] = { totalProfit: 0, gamesPlayed: 0 };
+                        playerChipsPurchased[settlement.name] = 0;
+                    }
+                    playerStats[settlement.name].totalProfit += settlement.netProfit;
+                    playerStats[settlement.name].gamesPlayed += 1;
+                    playerChipsPurchased[settlement.name] += settlement.chipsPurchased;
+                });
+            });
+
+            const rankings = Object.entries(playerStats)
+                .map(([name, stats]) => ({
+                    name,
+                    totalProfit: stats.totalProfit,
+                    gamesPlayed: stats.gamesPlayed,
+                    average: stats.totalProfit / stats.gamesPlayed,
+                    chipsPurchased: playerChipsPurchased[name]
+                }))
+                .sort((a, b) => b.totalProfit - a.totalProfit);
+
+            rankings.forEach((player, index) => {
+                csv += `${index + 1},${player.name},${player.totalProfit.toFixed(2)},${player.gamesPlayed},${player.average.toFixed(2)},${player.chipsPurchased.toFixed(2)}\n`;
+            });
+
+            // Add advanced statistics
+            const leadershipStats = calculateLeadershipStreak(yearGames);
+            const biggestSpender = Object.entries(playerChipsPurchased).sort((a, b) => b[1] - a[1])[0];
+
+            csv += '\n\nADVANCED STATISTICS\n';
+            csv += 'Metric,Value\n';
+            csv += `Longest at #1,${leadershipStats.leader || 'N/A'} (${leadershipStats.games} games)\n`;
+            csv += `Biggest Spender,${biggestSpender ? biggestSpender[0] : 'N/A'} ($${biggestSpender ? biggestSpender[1].toFixed(2) : '0'})\n`;
+
+            downloadCSV(csv, `Zagga_Poker_Complete_${currentYear}.csv`);
+        }
+
+        function exportHistoryToExcel() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            const yearGames = games.filter(game => new Date(game.date).getFullYear() === currentYear);
+
+            if (yearGames.length === 0) {
+                alert('No games to export');
+                return;
+            }
+
+            let csv = 'Zagga Poker - Game History\n';
+            csv += 'Date,Table Leader,Dealer,Entry Fee,Tips,Dealer Earnings,Player,Chips Bought,Final Chips,Profit/Loss\n';
+
+            yearGames.forEach(game => {
+                const gameDate = new Date(game.date).toLocaleDateString();
+                const dealerEarnings = (game.entryFee * game.settlements.length) + (game.dealerTips || 0);
+                
+                game.settlements.forEach(settlement => {
+                    csv += `${gameDate},${game.tableLeader},${game.dealerName || game.tableLeader},${game.entryFee},${game.dealerTips || 0},${dealerEarnings},${settlement.name},${settlement.chipsPurchased},${settlement.finalChips},${settlement.netProfit}\n`;
+                });
+            });
+
+            downloadCSV(csv, `Zagga_Poker_History_${currentYear}.csv`);
+        }
+
+        function exportRankingsToExcel() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            const yearGames = games.filter(game => new Date(game.date).getFullYear() === currentYear);
+
+            if (yearGames.length === 0) {
+                alert('No games to export');
+                return;
+            }
+
+            let csv = `Zagga Poker - Yearly Rankings ${currentYear}\n\n`;
+            csv += 'Rank,Player,Total Profit/Loss,Games Played,Average per Game,Win Rate\n';
+
+            const playerStats = {};
+            yearGames.forEach(game => {
+                game.settlements.forEach(settlement => {
+                    if (!playerStats[settlement.name]) {
+                        playerStats[settlement.name] = { 
+                            totalProfit: 0, 
+                            gamesPlayed: 0,
+                            wins: 0
+                        };
+                    }
+                    playerStats[settlement.name].totalProfit += settlement.netProfit;
+                    playerStats[settlement.name].gamesPlayed += 1;
+                    if (settlement.netProfit > 0) {
+                        playerStats[settlement.name].wins += 1;
+                    }
+                });
+            });
+
+            const rankings = Object.entries(playerStats)
+                .map(([name, stats]) => ({
+                    name,
+                    totalProfit: stats.totalProfit,
+                    gamesPlayed: stats.gamesPlayed,
+                    average: stats.totalProfit / stats.gamesPlayed,
+                    winRate: (stats.wins / stats.gamesPlayed * 100)
+                }))
+                .sort((a, b) => b.totalProfit - a.totalProfit);
+
+            rankings.forEach((player, index) => {
+                csv += `${index + 1},${player.name},${player.totalProfit.toFixed(2)},${player.gamesPlayed},${player.average.toFixed(2)},${player.winRate.toFixed(1)}%\n`;
+            });
+
+            downloadCSV(csv, `Zagga_Poker_Rankings_${currentYear}.csv`);
+        }
+
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // PWA Installation
