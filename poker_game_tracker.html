@@ -1,0 +1,2631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Track your weekly poker game settlements, rankings, and statistics with Zagga Poker">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Zagga Poker">
+    <title>Zagga Poker - Settlement Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+        }
+
+        .section h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h2::before {
+            content: "●";
+            color: #667eea;
+            font-size: 0.8em;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .player-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: end;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 12px;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-block {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .payment-item {
+            padding: 15px;
+            margin-bottom: 12px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .payment-amount {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .profit {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .loss {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .summary-item .name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-left-color: #0dcaf0;
+            color: #055160;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-success {
+            background: #d1e7dd;
+            border-left-color: #28a745;
+            color: #0f5132;
+        }
+
+        .ranking-item {
+            display: grid;
+            grid-template-columns: 50px 1fr 120px 100px;
+            gap: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            align-items: center;
+        }
+
+        .ranking-item.top-3 {
+            background: linear-gradient(135deg, #fff9e6 0%, #fff 100%);
+            border: 2px solid #ffc107;
+        }
+
+        .rank {
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            color: #667eea;
+        }
+
+        .rank.gold {
+            color: #ffc107;
+        }
+
+        .rank.silver {
+            color: #adb5bd;
+        }
+
+        .rank.bronze {
+            color: #cd7f32;
+        }
+
+        .player-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .games-played {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .game-history-item {
+            padding: 15px;
+            margin-bottom: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .game-date {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .game-players {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .game-player {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .regular-players-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .player-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .player-tag button {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .player-tag button:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        #positionHistoryTable table {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #positionHistoryTable th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        #positionHistoryTable td {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        #positionHistoryTable tr:last-child td {
+            border-bottom: none;
+        }
+
+        #positionHistoryTable tr:hover {
+            background: #e7f3ff !important;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .player-row {
+                grid-template-columns: 1fr;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .ranking-item {
+                grid-template-columns: 40px 1fr 80px;
+            }
+
+            .games-played {
+                display: none;
+            }
+
+            .tabs {
+                overflow-x: auto;
+            }
+
+            /* Stack action buttons on mobile for better usability */
+            #resultsSection > div > .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            #performanceChart {
+                max-height: 300px !important;
+            }
+
+            #positionHistoryTable {
+                font-size: 0.8em;
+            }
+
+            #positionHistoryTable th,
+            #positionHistoryTable td {
+                padding: 6px !important;
+                min-width: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🃏 Zagga Poker</h1>
+        <p class="subtitle">Track your weekly poker game with ease</p>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('newGame')">New Game</button>
+            <button class="tab" onclick="switchTab('rankings')">Yearly Rankings</button>
+            <button class="tab" onclick="switchTab('statistics')">Statistics</button>
+            <button class="tab" onclick="switchTab('history')">Game History</button>
+            <button class="tab" onclick="switchTab('players')">Regular Players</button>
+            <button class="tab" onclick="switchTab('sync')">🔄 Sync</button>
+        </div>
+
+        <!-- NEW GAME TAB -->
+        <div id="newGameTab" class="tab-content active">
+            <div id="setupSection">
+                <div class="section">
+                    <h2>Game Setup</h2>
+                    
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label for="gameDate">Game Date</label>
+                            <input type="date" id="gameDate">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="entryFee">Entry Fee (per player)</label>
+                            <input type="number" id="entryFee" placeholder="Enter entry fee amount" min="0" step="0.01" value="10">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label for="dealerName">Dealer Name <span style="color: #6c757d; font-size: 0.85em;">(Optional)</span></label>
+                            <input type="text" id="dealerName" placeholder="Defaults to 'Dealer'">
+                        </div>
+
+                        <div class="input-group">
+                            <label for="tableLeader">Table Leader (Player)</label>
+                            <select id="tableLeader">
+                                <option value="">Select table leader</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Players</h2>
+                    
+                    <div class="alert alert-info">
+                        <strong>Instructions:</strong> Add all players (one will be the Table Leader who collects fees). Enter how many chips each player bought during the game.
+                    </div>
+
+                    <div id="playersList"></div>
+                    
+                    <button class="btn btn-primary btn-block" onclick="addPlayer()">+ Add Player</button>
+                </div>
+
+                <div class="section">
+                    <h2>Final Chip Counts</h2>
+                    
+                    <div class="alert alert-warning">
+                        <strong>Important:</strong> At the end of the game, enter how many chips each player has left.
+                    </div>
+
+                    <div id="chipDistributionInfo" style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">
+                        <strong>📊 Chip Distribution:</strong>
+                        <div style="margin-top: 10px; font-size: 1.1em;">
+                            <div id="totalChipsDisplay">Total chips to distribute: $0.00</div>
+                            <div id="chipCountedDisplay" style="margin-top: 5px; color: #495057;"></div>
+                            <div id="chipRemainingDisplay" style="margin-top: 5px; font-weight: bold;"></div>
+                        </div>
+                        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc;">
+                            <span id="chipBalanceDisplay"></span>
+                        </div>
+                    </div>
+
+                    <div id="finalChipsList"></div>
+
+                    <div class="input-group" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e9ecef;">
+                        <label for="dealerTips">💰 Tips for Dealer</label>
+                        <input type="number" id="dealerTips" placeholder="Enter tips collected for dealer" min="0" step="0.01" value="0" 
+                               oninput="updateChipDistribution()" onchange="updateChipDistribution()">
+                    </div>
+                </div>
+
+                <button class="btn btn-success btn-block" style="font-size: 1.2em; padding: 18px;" onclick="calculateSettlement()">
+                    Calculate Settlement 💰
+                </button>
+            </div>
+
+            <div id="resultsSection" class="results">
+                <div class="section">
+                    <h2>Settlement Instructions</h2>
+                    <div id="paymentsResults"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Game Statistics</h2>
+                    <div id="gameStatsResults"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Profit & Loss Summary</h2>
+                    <div id="dealerEarningsResults"></div>
+                    <div id="profitLossResults"></div>
+                </div>
+
+                <div class="grid-2" style="margin-bottom: 15px;">
+                    <button class="btn btn-warning" onclick="editGame()">✏️ Edit Game</button>
+                    <button class="btn btn-success" onclick="saveGame()">💾 Save to History</button>
+                </div>
+                <div class="grid-2" style="margin-bottom: 10px;">
+                    <button class="btn btn-primary" onclick="shareToWhatsApp()" style="background: #25D366;">
+                        📱 Share to WhatsApp
+                    </button>
+                    <button class="btn btn-primary" onclick="copyResultsToClipboard()" style="background: #667eea;">
+                        📋 Copy Results
+                    </button>
+                </div>
+                <button class="btn btn-secondary btn-block" onclick="resetGame()">Start New Game</button>
+            </div>
+        </div>
+
+        <!-- RANKINGS TAB -->
+        <div id="rankingsTab" class="tab-content">
+            <div class="section">
+                <h2>Yearly Rankings <span id="currentYear" style="color: #667eea;"></span></h2>
+                
+                <div class="alert alert-info">
+                    <strong>Rankings:</strong> Based on cumulative profit/loss across all games this year (game results only - excluding entry fees and tips).
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-primary" onclick="exportRankingsToExcel()">📊 Export Rankings to Excel</button>
+                </div>
+
+                <div id="rankingsList"></div>
+
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn btn-warning" onclick="clearHistory()">Clear All History</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATISTICS TAB -->
+        <div id="statisticsTab" class="tab-content">
+            <div class="section">
+                <h2>Performance Statistics</h2>
+                
+                <div class="alert alert-info">
+                    <strong>Visual Analytics:</strong> Track player performance trends throughout the year.
+                </div>
+
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <button class="btn btn-success" onclick="exportToExcel()">📊 Export All Data to Excel</button>
+                </div>
+
+                <div id="chartContainer" style="margin-bottom: 30px;">
+                    <canvas id="performanceChart" style="max-height: 400px;"></canvas>
+                </div>
+
+                <div id="statsGrid" class="stat-grid"></div>
+
+                <div class="section" style="margin-top: 30px;">
+                    <h3 style="color: #495057; margin-bottom: 20px;">📊 Position History</h3>
+                    <div class="alert alert-info">
+                        <strong>Track:</strong> See how rankings changed after each game throughout the year.
+                    </div>
+                    <div id="positionHistoryTable" style="overflow-x: auto;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTORY TAB -->
+        <div id="historyTab" class="tab-content">
+            <div class="section">
+                <h2>Game History</h2>
+                
+                <div class="alert alert-info">
+                    <strong>View:</strong> All recorded games for the current year.
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <button class="btn btn-primary" onclick="exportHistoryToExcel()">📊 Export History to Excel</button>
+                </div>
+
+                <div id="historyList"></div>
+            </div>
+        </div>
+
+        <!-- REGULAR PLAYERS TAB -->
+        <div id="playersTab" class="tab-content">
+            <div class="section">
+                <h2>Regular Players</h2>
+                
+                <div class="alert alert-info">
+                    <strong>Manage:</strong> Add your regular players here. They will appear in a dropdown when setting up games.
+                </div>
+
+                <div class="regular-players-list" id="regularPlayersList"></div>
+
+                <div class="input-group">
+                    <label for="newPlayerName">Add New Regular Player</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="newPlayerName" placeholder="Enter player name" onkeypress="if(event.key==='Enter') addRegularPlayer()">
+                        <button class="btn btn-primary" onclick="addRegularPlayer()">Add Player</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SYNC TAB -->
+        <div id="syncTab" class="tab-content">
+            <div class="section">
+                <h2>🔄 Sync Data Across Devices</h2>
+                
+                <div class="alert alert-warning">
+                    <strong>⚠️ Important:</strong> Currently, each device stores data separately. Use these tools to sync between your computer and phone.
+                </div>
+
+                <div class="section" style="background: white;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">📤 Export Data</h3>
+                    <p style="margin-bottom: 15px; color: #6c757d;">
+                        Export all your data to sync from this device to another.
+                    </p>
+                    <button class="btn btn-primary btn-block" onclick="exportAllData()">
+                        💾 Download All Data
+                    </button>
+                    <div id="exportStatus" style="margin-top: 10px;"></div>
+                </div>
+
+                <div class="section" style="background: white; margin-top: 20px;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">📥 Import Data</h3>
+                    <p style="margin-bottom: 15px; color: #6c757d;">
+                        Import data from another device. This will <strong>merge</strong> with existing data.
+                    </p>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importAllData(event)">
+                    <button class="btn btn-success btn-block" onclick="document.getElementById('importFile').click()">
+                        📁 Upload Data File
+                    </button>
+                    <div id="importStatus" style="margin-top: 10px;"></div>
+                </div>
+
+                <div class="alert alert-info" style="margin-top: 30px;">
+                    <strong>💡 How to Sync:</strong><br/><br/>
+                    <strong>From Computer to Phone:</strong><br/>
+                    1. On computer: Click "Download All Data"<br/>
+                    2. Send the file to your phone (email, WhatsApp, etc.)<br/>
+                    3. On phone: Open Zagga Poker, go to Sync tab<br/>
+                    4. Click "Upload Data File" and select the file<br/><br/>
+                    
+                    <strong>From Phone to Computer:</strong><br/>
+                    1. On phone: Click "Download All Data"<br/>
+                    2. Send the file to your computer<br/>
+                    3. On computer: Go to Sync tab<br/>
+                    4. Click "Upload Data File" and select the file
+                </div>
+
+                <div class="section" style="background: #fff3cd; border-left-color: #ffc107; margin-top: 20px;">
+                    <h3 style="color: #856404; margin-bottom: 15px;">⚠️ Data Info</h3>
+                    <div id="dataInfo" style="color: #856404;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let players = [];
+        let playerIdCounter = 0;
+        let currentGameResult = null;
+        let regularPlayers = [];
+
+        // Initialize
+        document.getElementById('gameDate').valueAsDate = new Date();
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+        loadRegularPlayers();
+        addPlayer();
+        loadRankings();
+        loadHistory();
+        renderRegularPlayers();
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            if (tabName === 'newGame') {
+                document.getElementById('newGameTab').classList.add('active');
+                document.querySelectorAll('.tab')[0].classList.add('active');
+            } else if (tabName === 'rankings') {
+                document.getElementById('rankingsTab').classList.add('active');
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                loadRankings();
+            } else if (tabName === 'statistics') {
+                document.getElementById('statisticsTab').classList.add('active');
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                loadStatistics();
+            } else if (tabName === 'history') {
+                document.getElementById('historyTab').classList.add('active');
+                document.querySelectorAll('.tab')[3].classList.add('active');
+                loadHistory();
+            } else if (tabName === 'players') {
+                document.getElementById('playersTab').classList.add('active');
+                document.querySelectorAll('.tab')[4].classList.add('active');
+                renderRegularPlayers();
+            } else if (tabName === 'sync') {
+                document.getElementById('syncTab').classList.add('active');
+                document.querySelectorAll('.tab')[5].classList.add('active');
+                displayDataInfo();
+            }
+        }
+
+        // Regular Players Management
+        function loadRegularPlayers() {
+            regularPlayers = JSON.parse(localStorage.getItem('regularPlayers') || '[]');
+        }
+
+        function saveRegularPlayers() {
+            localStorage.setItem('regularPlayers', JSON.stringify(regularPlayers));
+        }
+
+        function addRegularPlayer() {
+            const input = document.getElementById('newPlayerName');
+            const name = input.value.trim();
+            
+            if (!name) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            if (regularPlayers.includes(name)) {
+                alert('This player already exists in the regular players list');
+                return;
+            }
+            
+            regularPlayers.push(name);
+            regularPlayers.sort();
+            saveRegularPlayers();
+            renderRegularPlayers();
+            input.value = '';
+        }
+
+        function removeRegularPlayer(name) {
+            if (!confirm(`Remove ${name} from regular players?`)) return;
+            
+            regularPlayers = regularPlayers.filter(p => p !== name);
+            saveRegularPlayers();
+            renderRegularPlayers();
+        }
+
+        function renderRegularPlayers() {
+            const container = document.getElementById('regularPlayersList');
+            
+            if (regularPlayers.length === 0) {
+                container.innerHTML = '<div class="alert alert-warning">No regular players added yet. Add your first player below!</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            regularPlayers.forEach(playerName => {
+                const tag = document.createElement('div');
+                tag.className = 'player-tag';
+                tag.innerHTML = `
+                    ${playerName}
+                    <button onclick="removeRegularPlayer('${playerName.replace(/'/g, "\\'")}')">×</button>
+                `;
+                container.appendChild(tag);
+            });
+        }
+
+        function addPlayer() {
+            const player = {
+                id: playerIdCounter++,
+                name: '',
+                chipsPurchased: 0,
+                finalChips: 0
+            };
+            players.push(player);
+            renderPlayers();
+            updateTableLeaderDropdown();
+        }
+
+        function removePlayer(id) {
+            players = players.filter(p => p.id !== id);
+            renderPlayers();
+            updateTableLeaderDropdown();
+        }
+
+        function updateTableLeaderDropdown() {
+            const select = document.getElementById('tableLeader');
+            const currentValue = select.value;
+            
+            select.innerHTML = '<option value="">Select table leader</option>';
+            
+            players.forEach(player => {
+                if (player.name) {
+                    const option = document.createElement('option');
+                    option.value = player.id;
+                    option.textContent = player.name;
+                    if (player.id.toString() === currentValue) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        function handlePlayerSelect(id, value) {
+            const player = players.find(p => p.id === id);
+            if (!player) return;
+            
+            if (value === '__custom__') {
+                // Show custom input, hide select
+                player.name = '';
+                const selectElem = document.getElementById(`select_${id}`);
+                const inputElem = document.getElementById(`customInput_${id}`);
+                if (selectElem) selectElem.style.display = 'none';
+                if (inputElem) {
+                    inputElem.style.display = 'block';
+                    inputElem.focus();
+                }
+            } else if (value) {
+                // Check if this player name is already selected by another player
+                const isDuplicate = players.some(p => p.id !== id && p.name.trim().toLowerCase() === value.trim().toLowerCase());
+                
+                if (isDuplicate) {
+                    // Show error message
+                    showDuplicatePlayerError(value);
+                    
+                    // Reset the dropdown to empty
+                    const selectElem = document.getElementById(`select_${id}`);
+                    if (selectElem) {
+                        selectElem.value = '';
+                    }
+                    return;
+                }
+                
+                updatePlayer(id, 'name', value);
+            }
+        }
+
+        function updatePlayer(id, field, value) {
+            const player = players.find(p => p.id === id);
+            if (player) {
+                // Check for duplicate player names when updating name field
+                if (field === 'name' && value.trim()) {
+                    const isDuplicate = players.some(p => p.id !== id && p.name.trim().toLowerCase() === value.trim().toLowerCase());
+                    
+                    if (isDuplicate) {
+                        // Show error message
+                        showDuplicatePlayerError(value);
+                        
+                        // Reset the name field
+                        const inputElem = document.getElementById(`customInput_${id}`);
+                        if (inputElem) {
+                            inputElem.value = '';
+                        }
+                        player.name = '';
+                        updateTableLeaderDropdown();
+                        return;
+                    }
+                }
+                
+                player[field] = value;
+                if (field === 'chipsPurchased' || field === 'finalChips') {
+                    updateChipDistribution();
+                }
+                if (field === 'name') {
+                    updateTableLeaderDropdown();
+                }
+            }
+        }
+
+        function updateChipDistribution() {
+            const validPlayers = players.filter(p => p.name.trim());
+            const totalChipsBought = validPlayers.reduce((sum, p) => sum + (parseFloat(p.chipsPurchased) || 0), 0);
+            const totalChipsCounted = validPlayers.reduce((sum, p) => sum + (parseFloat(p.finalChips) || 0), 0);
+            const dealerTips = parseFloat(document.getElementById('dealerTips').value) || 0;
+            
+            // Calculate remaining chips to count
+            const totalAccountedFor = totalChipsCounted + dealerTips;
+            const remaining = totalChipsBought - totalAccountedFor;
+            
+            // Chips should balance: total bought = total counted + tips (tips come out of the chips)
+            const expectedFinalChips = totalChipsBought - dealerTips;
+            const difference = totalChipsCounted - expectedFinalChips;
+            
+            const totalDisplay = document.getElementById('totalChipsDisplay');
+            const countedDisplay = document.getElementById('chipCountedDisplay');
+            const remainingDisplay = document.getElementById('chipRemainingDisplay');
+            const balanceDisplay = document.getElementById('chipBalanceDisplay');
+            
+            if (totalDisplay) {
+                totalDisplay.textContent = `Total chips to distribute: $${totalChipsBought.toFixed(2)}`;
+            }
+            
+            // Show countdown of chips counted vs remaining
+            if (countedDisplay && remainingDisplay) {
+                if (totalChipsCounted > 0 || dealerTips > 0) {
+                    countedDisplay.innerHTML = `Counted: $${totalChipsCounted.toFixed(2)} | Tips: $${dealerTips.toFixed(2)}`;
+                    
+                    if (Math.abs(remaining) < 0.01) {
+                        remainingDisplay.innerHTML = '<span style="color: #28a745;">Remaining: $0.00 ✓</span>';
+                    } else if (remaining > 0) {
+                        remainingDisplay.innerHTML = `<span style="color: #ffc107;">Remaining to count: $${remaining.toFixed(2)}</span>`;
+                    } else {
+                        remainingDisplay.innerHTML = `<span style="color: #dc3545;">Over by: $${Math.abs(remaining).toFixed(2)}</span>`;
+                    }
+                } else {
+                    countedDisplay.textContent = '';
+                    remainingDisplay.textContent = '';
+                }
+            }
+            
+            // Show final balance status
+            if (balanceDisplay) {
+                if (totalChipsCounted === 0 && dealerTips === 0) {
+                    balanceDisplay.textContent = '';
+                } else {
+                    if (Math.abs(difference) < 0.01) {
+                        balanceDisplay.innerHTML = '<span style="color: #28a745; font-weight: bold;">✓ All chips accounted for!</span>';
+                    } else {
+                        const statusText = `Total: $${totalChipsCounted.toFixed(2)} + Tips: $${dealerTips.toFixed(2)} = $${totalAccountedFor.toFixed(2)}`;
+                        if (difference > 0) {
+                            balanceDisplay.innerHTML = `<span style="color: #dc3545;">${statusText}<br/>⚠ Extra chips: $${difference.toFixed(2)}</span>`;
+                        } else {
+                            balanceDisplay.innerHTML = `<span style="color: #dc3545;">${statusText}<br/>⚠ Missing chips: $${Math.abs(difference).toFixed(2)}</span>`;
+                        }
+                    }
+                }
+            }
+        }
+
+        function renderPlayers() {
+            const playersList = document.getElementById('playersList');
+            const finalChipsList = document.getElementById('finalChipsList');
+            
+            playersList.innerHTML = '';
+            finalChipsList.innerHTML = '';
+
+            players.forEach(player => {
+                // Player setup row
+                const setupRow = document.createElement('div');
+                setupRow.className = 'player-row';
+                
+                // Build player name select options
+                let selectOptions = '<option value="">Select a player</option>';
+                regularPlayers.forEach(regPlayer => {
+                    const selected = regPlayer === player.name ? 'selected' : '';
+                    const escapedName = regPlayer.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    selectOptions += `<option value="${escapedName}" ${selected}>${regPlayer}</option>`;
+                });
+                selectOptions += '<option value="__custom__">-- Enter Custom Name --</option>';
+                
+                const showCustomInput = player.name && (regularPlayers.length === 0 || !regularPlayers.includes(player.name));
+                const showSelect = !showCustomInput;
+                
+                setupRow.innerHTML = `
+                    <div>
+                        <label>Player Name</label>
+                        <select onchange="handlePlayerSelect(${player.id}, this.value)" style="display:${showSelect ? 'block' : 'none'};" id="select_${player.id}">
+                            ${selectOptions}
+                        </select>
+                        <input type="text" placeholder="Enter custom name" value="${showCustomInput ? player.name : ''}" 
+                               onchange="updatePlayer(${player.id}, 'name', this.value)"
+                               style="display:${showCustomInput ? 'block' : 'none'};" id="customInput_${player.id}">
+                    </div>
+                    <div>
+                        <label>Chips Bought</label>
+                        <input type="number" placeholder="Amount" min="0" step="0.01" value="${player.chipsPurchased || ''}"
+                               oninput="updatePlayer(${player.id}, 'chipsPurchased', parseFloat(this.value) || 0)"
+                               onchange="updatePlayer(${player.id}, 'chipsPurchased', parseFloat(this.value) || 0)">
+                    </div>
+                    <div style="opacity: 0; pointer-events: none;">
+                        <label>Spacer</label>
+                        <input type="text">
+                    </div>
+                    <div>
+                        <button class="btn btn-danger" onclick="removePlayer(${player.id})" title="Remove player">✕</button>
+                    </div>
+                `;
+                playersList.appendChild(setupRow);
+
+                // Final chips row
+                if (player.name) {
+                    const finalRow = document.createElement('div');
+                    finalRow.className = 'player-row';
+                    finalRow.innerHTML = `
+                        <div>
+                            <label>${player.name}</label>
+                        </div>
+                        <div>
+                            <label>Final Chips</label>
+                            <input type="number" placeholder="Final chips" min="0" step="0.01" value="${player.finalChips || ''}"
+                                   oninput="updatePlayer(${player.id}, 'finalChips', parseFloat(this.value) || 0)"
+                                   onchange="updatePlayer(${player.id}, 'finalChips', parseFloat(this.value) || 0)">
+                        </div>
+                    `;
+                    finalChipsList.appendChild(finalRow);
+                }
+            });
+            
+            // Update chip distribution display
+            updateChipDistribution();
+        }
+
+        function calculateSettlement() {
+            const entryFee = parseFloat(document.getElementById('entryFee').value) || 0;
+            const dealerTips = parseFloat(document.getElementById('dealerTips').value) || 0;
+            const dealerNameInput = document.getElementById('dealerName').value.trim();
+            const dealerName = dealerNameInput || 'Dealer'; // Default to "Dealer" if empty
+            const tableLeaderValue = document.getElementById('tableLeader').value;
+            const gameDate = document.getElementById('gameDate').value;
+
+            // Validation
+            if (!gameDate) {
+                alert('Please select a game date');
+                return;
+            }
+
+            if (tableLeaderValue === '' || tableLeaderValue === null) {
+                alert('Please select a table leader from the players');
+                return;
+            }
+
+            const tableLeaderId = parseInt(tableLeaderValue);
+            const validPlayers = players.filter(p => p.name.trim());
+            
+            if (validPlayers.length < 2) {
+                alert('Please add at least 2 players');
+                return;
+            }
+
+            const tableLeader = validPlayers.find(p => p.id === tableLeaderId);
+            if (!tableLeader) {
+                alert('Selected table leader not found in players list');
+                return;
+            }
+
+            // Calculate net profit/loss for each player (chips won/lost in the game - excluding entry fees)
+            const settlements = validPlayers.map(player => {
+                const netProfit = player.finalChips - player.chipsPurchased;
+                return {
+                    id: player.id,
+                    name: player.name,
+                    netProfit: netProfit,
+                    chipsPurchased: player.chipsPurchased,
+                    finalChips: player.finalChips
+                };
+            });
+
+            // Create a map to track net amounts owed between players
+            const netAmounts = {};
+            
+            validPlayers.forEach(player => {
+                netAmounts[player.name] = 0;
+            });
+
+            // Add game settlements (chip wins/losses)
+            settlements.forEach(settlement => {
+                netAmounts[settlement.name] += settlement.netProfit;
+            });
+
+            // Add entry fee payments (everyone pays to table leader)
+            if (entryFee > 0) {
+                const totalEntryFees = entryFee * validPlayers.length;
+                validPlayers.forEach(player => {
+                    netAmounts[player.name] -= entryFee; // Everyone pays entry fee
+                });
+                // Table leader collects all entry fees
+                netAmounts[tableLeader.name] += totalEntryFees;
+            }
+
+            // Add tips as additional receivable for table leader
+            // Tips come out of the chips already counted, so they don't need to be split
+            // Just add to table leader's receivables
+            if (dealerTips > 0) {
+                netAmounts[tableLeader.name] += dealerTips;
+            }
+
+            // Calculate optimized payments
+            const payments = calculateOptimizedPayments(netAmounts);
+
+            // Store current game result
+            const totalEntryFees = entryFee * validPlayers.length;
+            currentGameResult = {
+                date: gameDate,
+                entryFee: entryFee,
+                dealerTips: dealerTips,
+                dealerName: dealerName,
+                tableLeader: tableLeader.name,
+                settlements: settlements,
+                payments: payments
+            };
+
+            // Display results
+            displayResults(payments, settlements, tableLeader.name, dealerName, totalEntryFees, dealerTips);
+        }
+
+        function calculateOptimizedPayments(netAmounts) {
+            const payments = [];
+            
+            // Separate debtors and creditors
+            let debtors = [];
+            let creditors = [];
+            
+            for (let person in netAmounts) {
+                const amount = netAmounts[person];
+                if (amount < -0.01) {
+                    debtors.push({ name: person, amount: Math.abs(amount) });
+                } else if (amount > 0.01) {
+                    creditors.push({ name: person, amount: amount });
+                }
+            }
+
+            // Sort for consistent ordering
+            debtors.sort((a, b) => b.amount - a.amount);
+            creditors.sort((a, b) => b.amount - a.amount);
+
+            // Match debtors with creditors
+            while (debtors.length > 0 && creditors.length > 0) {
+                const debtor = debtors[0];
+                const creditor = creditors[0];
+
+                const amount = Math.min(debtor.amount, creditor.amount);
+
+                if (amount > 0.01) {
+                    payments.push({
+                        from: debtor.name,
+                        to: creditor.name,
+                        amount: amount
+                    });
+                }
+
+                debtor.amount -= amount;
+                creditor.amount -= amount;
+
+                if (debtor.amount < 0.01) debtors.shift();
+                if (creditor.amount < 0.01) creditors.shift();
+            }
+
+            return payments;
+        }
+
+        function displayResults(payments, settlements, tableLeaderName, dealerName, totalEntryFees, dealerTips) {
+            // Calculate game statistics
+            const totalChipsBought = settlements.reduce((sum, s) => sum + s.chipsPurchased, 0);
+            const totalChipsEnd = settlements.reduce((sum, s) => sum + s.finalChips, 0);
+            const biggestWinner = settlements.reduce((max, s) => s.netProfit > max.netProfit ? s : max, settlements[0]);
+            const biggestLoser = settlements.reduce((min, s) => s.netProfit < min.netProfit ? s : min, settlements[0]);
+            const totalMoneyInPot = totalChipsBought + totalEntryFees + dealerTips;
+            const avgBuyIn = totalChipsBought / settlements.length;
+            
+            // Display game statistics
+            const statsDiv = document.getElementById('gameStatsResults');
+            statsDiv.innerHTML = `
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Chips in Play</div>
+                        <div class="stat-value">$${totalChipsBought.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Money in Pot</div>
+                        <div class="stat-value">$${totalMoneyInPot.toFixed(2)}</div>
+                        <div class="stat-label" style="margin-top: 5px; font-size: 0.8em;">Chips + Entry Fees + Tips</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Number of Players</div>
+                        <div class="stat-value">${settlements.length}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Average Buy-In</div>
+                        <div class="stat-value">$${avgBuyIn.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #28a745;">
+                        <div class="stat-label">Biggest Winner</div>
+                        <div class="stat-value" style="font-size: 1.2em; color: #28a745;">${biggestWinner.name}</div>
+                        <div class="stat-label" style="margin-top: 5px;">+$${biggestWinner.netProfit.toFixed(2)}</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #dc3545;">
+                        <div class="stat-label">Biggest Loser</div>
+                        <div class="stat-value" style="font-size: 1.2em; color: #dc3545;">${biggestLoser.name}</div>
+                        <div class="stat-label" style="margin-top: 5px;">-$${Math.abs(biggestLoser.netProfit).toFixed(2)}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Display payments
+            const paymentsDiv = document.getElementById('paymentsResults');
+            paymentsDiv.innerHTML = '';
+
+            if (payments.length === 0) {
+                paymentsDiv.innerHTML = '<div class="alert alert-info">No payments needed! Everyone broke even.</div>';
+            } else {
+                payments.forEach(payment => {
+                    const paymentDiv = document.createElement('div');
+                    paymentDiv.className = 'payment-item';
+                    
+                    paymentDiv.innerHTML = `
+                        <div>💵 <strong>${payment.from}</strong> pays <strong>${payment.to}</strong></div>
+                        <div class="payment-amount">$${payment.amount.toFixed(2)}</div>
+                    `;
+                    paymentsDiv.appendChild(paymentDiv);
+                });
+            }
+
+            if (totalEntryFees > 0 || dealerTips > 0) {
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'alert alert-success';
+                infoDiv.style.marginTop = '20px';
+                
+                const leaderPaysDealer = totalEntryFees + dealerTips;
+                
+                let infoHTML = '<strong>💡 Note:</strong> Entry fees';
+                if (dealerTips > 0) {
+                    infoHTML += ' and tips are';
+                } else {
+                    infoHTML += ' are';
+                }
+                infoHTML += ' included in the payment amounts above.<br/><br/>';
+                infoHTML += `<strong>📋 Table Leader (${tableLeaderName}) must pay Dealer (${dealerName}):</strong><br/>`;
+                infoHTML += '<div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.3); border-radius: 5px;">';
+                
+                if (totalEntryFees > 0) {
+                    infoHTML += `&nbsp;&nbsp;• Entry Fees: <strong>$${totalEntryFees.toFixed(2)}</strong><br/>`;
+                }
+                if (dealerTips > 0) {
+                    infoHTML += `&nbsp;&nbsp;• Tips: <strong>$${dealerTips.toFixed(2)}</strong><br/>`;
+                }
+                infoHTML += `&nbsp;&nbsp;<strong>Total to Dealer: $${leaderPaysDealer.toFixed(2)}</strong>`;
+                infoHTML += '</div>';
+                
+                infoDiv.innerHTML = infoHTML;
+                paymentsDiv.appendChild(infoDiv);
+            }
+
+            // Display dealer earnings
+            const dealerEarningsDiv = document.getElementById('dealerEarningsResults');
+            const totalDealerEarnings = totalEntryFees + dealerTips;
+            
+            if (totalDealerEarnings > 0) {
+                dealerEarningsDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>🎰 Dealer Earnings (${dealerName}):</strong> 
+                        <span style="font-size: 1.2em; font-weight: bold;">$${totalDealerEarnings.toFixed(2)}</span>
+                        <span style="margin-left: 15px; color: #6c757d;">
+                            (Entry Fees: $${totalEntryFees.toFixed(2)} + Tips: $${dealerTips.toFixed(2)})
+                        </span>
+                        <div style="margin-top: 10px; font-size: 0.9em; color: #6c757d;">
+                            Paid by Table Leader: ${tableLeaderName}
+                        </div>
+                    </div>
+                `;
+            } else {
+                dealerEarningsDiv.innerHTML = '';
+            }
+
+            // Display profit/loss summary (excluding entry fees and tips)
+            const profitLossDiv = document.getElementById('profitLossResults');
+            profitLossDiv.innerHTML = '<h3 style="margin-top: 20px; margin-bottom: 15px; color: #495057;">Player Results (Game Only)</h3>';
+
+            settlements.sort((a, b) => b.netProfit - a.netProfit).forEach(settlement => {
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'summary-item';
+                
+                const profitClass = settlement.netProfit > 0 ? 'profit' : settlement.netProfit < 0 ? 'loss' : '';
+                const emoji = settlement.netProfit > 0 ? '📈' : settlement.netProfit < 0 ? '📉' : '➖';
+                
+                summaryDiv.innerHTML = `
+                    <span class="name">${emoji} ${settlement.name}</span>
+                    <span class="${profitClass}">
+                        ${settlement.netProfit >= 0 ? '+' : ''}$${settlement.netProfit.toFixed(2)}
+                    </span>
+                `;
+                profitLossDiv.appendChild(summaryDiv);
+            });
+
+            // Show results section
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('resultsSection').classList.add('show');
+        }
+
+        function saveGame() {
+            if (!currentGameResult) return;
+
+            // Get existing games from localStorage
+            let games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            
+            // Add current game
+            games.push(currentGameResult);
+            
+            // Save back to localStorage
+            localStorage.setItem('pokerGames', JSON.stringify(games));
+
+            alert('Game saved successfully!');
+            
+            // Switch to rankings tab
+            switchTab('rankings');
+            resetGame();
+        }
+
+        function loadRankings() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            
+            // Filter games for current year
+            const yearGames = games.filter(game => {
+                const gameYear = new Date(game.date).getFullYear();
+                return gameYear === currentYear;
+            });
+
+            // Calculate cumulative stats for each player
+            const playerStats = {};
+
+            yearGames.forEach(game => {
+                game.settlements.forEach(settlement => {
+                    if (!playerStats[settlement.name]) {
+                        playerStats[settlement.name] = {
+                            name: settlement.name,
+                            totalProfit: 0,
+                            gamesPlayed: 0
+                        };
+                    }
+                    playerStats[settlement.name].totalProfit += settlement.netProfit;
+                    playerStats[settlement.name].gamesPlayed += 1;
+                });
+            });
+
+            // Convert to array and sort
+            const rankings = Object.values(playerStats).sort((a, b) => b.totalProfit - a.totalProfit);
+
+            // Display rankings
+            const rankingsDiv = document.getElementById('rankingsList');
+            
+            if (rankings.length === 0) {
+                rankingsDiv.innerHTML = '<div class="alert alert-info">No games recorded yet for this year.</div>';
+                return;
+            }
+
+            rankingsDiv.innerHTML = '';
+
+            rankings.forEach((player, index) => {
+                const rank = index + 1;
+                const rankDiv = document.createElement('div');
+                rankDiv.className = 'ranking-item' + (rank <= 3 ? ' top-3' : '');
+                
+                let rankClass = '';
+                let rankEmoji = '';
+                if (rank === 1) { rankClass = 'gold'; rankEmoji = '🥇'; }
+                else if (rank === 2) { rankClass = 'silver'; rankEmoji = '🥈'; }
+                else if (rank === 3) { rankClass = 'bronze'; rankEmoji = '🥉'; }
+
+                const profitClass = player.totalProfit > 0 ? 'profit' : player.totalProfit < 0 ? 'loss' : '';
+                
+                rankDiv.innerHTML = `
+                    <div class="rank ${rankClass}">${rankEmoji || rank}</div>
+                    <div>
+                        <div class="player-name">${player.name}</div>
+                        <div class="games-played">${player.gamesPlayed} game${player.gamesPlayed !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div class="${profitClass}" style="text-align: right; font-weight: bold; font-size: 1.1em;">
+                        ${player.totalProfit >= 0 ? '+' : ''}$${player.totalProfit.toFixed(2)}
+                    </div>
+                    <div style="text-align: right; color: #6c757d;">
+                        Avg: ${player.gamesPlayed > 0 ? '$' + (player.totalProfit / player.gamesPlayed).toFixed(2) : '$0.00'}
+                    </div>
+                `;
+                rankingsDiv.appendChild(rankDiv);
+            });
+        }
+
+        function loadHistory() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            
+            // Filter and sort games for current year
+            const yearGames = games
+                .filter(game => new Date(game.date).getFullYear() === currentYear)
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const historyDiv = document.getElementById('historyList');
+            
+            if (yearGames.length === 0) {
+                historyDiv.innerHTML = '<div class="alert alert-info">No games recorded yet for this year.</div>';
+                return;
+            }
+
+            historyDiv.innerHTML = '';
+
+            yearGames.forEach((game, index) => {
+                const gameDiv = document.createElement('div');
+                gameDiv.className = 'game-history-item';
+                
+                const dateObj = new Date(game.date);
+                const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+
+                let playersHTML = '<div class="game-players">';
+                game.settlements.forEach(settlement => {
+                    const profitClass = settlement.netProfit > 0 ? 'profit' : settlement.netProfit < 0 ? 'loss' : '';
+                    playersHTML += `
+                        <div class="game-player">
+                            <span>${settlement.name}</span>
+                            <span class="${profitClass}">
+                                ${settlement.netProfit >= 0 ? '+' : ''}$${settlement.netProfit.toFixed(2)}
+                            </span>
+                        </div>
+                    `;
+                });
+                playersHTML += '</div>';
+
+                const dealerTips = game.dealerTips || 0;
+                const dealerName = game.dealerName || game.tableLeader; // Fallback for old data
+                const tableLeaderName = game.tableLeader;
+                const totalDealerEarnings = (game.entryFee * game.settlements.length) + dealerTips;
+                
+                gameDiv.innerHTML = `
+                    <div class="game-date">📅 ${formattedDate}</div>
+                    <div style="margin-bottom: 10px;">
+                        <strong>Table Leader:</strong> ${tableLeaderName} | 
+                        <strong>Dealer:</strong> ${dealerName} | 
+                        <strong>Entry Fee:</strong> $${game.entryFee.toFixed(2)} | 
+                        <strong>Tips:</strong> $${dealerTips.toFixed(2)} | 
+                        <strong>Dealer Earnings:</strong> <span style="color: #28a745; font-weight: bold;">$${totalDealerEarnings.toFixed(2)}</span>
+                    </div>
+                    ${playersHTML}
+                    <div style="text-align: right; margin-top: 10px;">
+                        <button class="btn btn-danger btn-small" onclick="deleteGame(${index})">Delete Game</button>
+                    </div>
+                `;
+                historyDiv.appendChild(gameDiv);
+            });
+        }
+
+        function deleteGame(index) {
+            if (!confirm('Are you sure you want to delete this game?')) return;
+
+            const currentYear = new Date().getFullYear();
+            const allGames = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            
+            // Find the actual index in all games
+            const yearGames = allGames
+                .map((game, idx) => ({ game, idx }))
+                .filter(item => new Date(item.game.date).getFullYear() === currentYear)
+                .sort((a, b) => new Date(b.game.date) - new Date(a.game.date));
+
+            const actualIndex = yearGames[index].idx;
+            
+            allGames.splice(actualIndex, 1);
+            localStorage.setItem('pokerGames', JSON.stringify(allGames));
+            
+            loadHistory();
+            loadRankings();
+        }
+
+        function clearHistory() {
+            if (!confirm('Are you sure you want to clear all game history? This cannot be undone.')) return;
+            
+            localStorage.removeItem('pokerGames');
+            loadRankings();
+            loadHistory();
+            alert('All game history has been cleared.');
+        }
+
+        function editGame() {
+            // Go back to setup section without losing current data
+            document.getElementById('setupSection').style.display = 'block';
+            document.getElementById('resultsSection').classList.remove('show');
+            
+            // Scroll to top for better UX
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetGame() {
+            players = [];
+            playerIdCounter = 0;
+            currentGameResult = null;
+            addPlayer();
+            document.getElementById('setupSection').style.display = 'block';
+            document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('entryFee').value = '10';
+            document.getElementById('dealerTips').value = '0';
+            document.getElementById('dealerName').value = '';
+            document.getElementById('tableLeader').value = '';
+            document.getElementById('gameDate').valueAsDate = new Date();
+            updateChipDistribution();
+        }
+
+        // Statistics and Charts
+        let performanceChart = null;
+
+        function loadStatistics() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            
+            const yearGames = games.filter(game => {
+                const gameYear = new Date(game.date).getFullYear();
+                return gameYear === currentYear;
+            }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (yearGames.length === 0) {
+                document.getElementById('chartContainer').innerHTML = '<div class="alert alert-info">No games recorded yet. Play some games to see statistics!</div>';
+                document.getElementById('statsGrid').innerHTML = '';
+                return;
+            }
+
+            // Calculate cumulative performance over time
+            const playerCumulative = {};
+            const gameLabels = [];
+            
+            yearGames.forEach((game, index) => {
+                const gameDate = new Date(game.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                gameLabels.push(gameDate);
+                
+                game.settlements.forEach(settlement => {
+                    if (!playerCumulative[settlement.name]) {
+                        playerCumulative[settlement.name] = {
+                            data: new Array(index).fill(0),
+                            total: 0
+                        };
+                    }
+                    playerCumulative[settlement.name].total += settlement.netProfit;
+                    playerCumulative[settlement.name].data.push(playerCumulative[settlement.name].total);
+                });
+                
+                // Fill forward for players who didn't play this game
+                Object.keys(playerCumulative).forEach(playerName => {
+                    if (playerCumulative[playerName].data.length < index + 1) {
+                        const lastValue = playerCumulative[playerName].data[playerCumulative[playerName].data.length - 1] || 0;
+                        playerCumulative[playerName].data.push(lastValue);
+                    }
+                });
+            });
+
+            // Generate colors for each player
+            const colors = [
+                '#667eea', '#764ba2', '#f093fb', '#4facfe', 
+                '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+                '#a8edea', '#fed6e3', '#c471ed', '#12c2e9'
+            ];
+
+            const datasets = Object.keys(playerCumulative).map((playerName, index) => ({
+                label: playerName,
+                data: playerCumulative[playerName].data,
+                borderColor: colors[index % colors.length],
+                backgroundColor: colors[index % colors.length] + '20',
+                tension: 0.4,
+                fill: false,
+                borderWidth: 3
+            }));
+
+            // Create or update chart
+            const ctx = document.getElementById('performanceChart');
+            if (ctx) {
+                if (performanceChart) {
+                    performanceChart.destroy();
+                }
+                
+                performanceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: gameLabels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Cumulative Performance Over Time',
+                                font: { size: 18, weight: 'bold' }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value;
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Cumulative Profit/Loss'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Game Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Display overall statistics
+            displayOverallStats(yearGames);
+        }
+
+        function displayOverallStats(games) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            // Calculate stats
+            const totalGames = games.length;
+            const totalChipsInPlay = games.reduce((sum, g) => {
+                return sum + g.settlements.reduce((s, settlement) => s + settlement.chipsPurchased, 0);
+            }, 0);
+            const totalEntryFees = games.reduce((sum, g) => sum + (g.entryFee * g.settlements.length), 0);
+            const totalTips = games.reduce((sum, g) => sum + (g.dealerTips || 0), 0);
+            const avgGameSize = totalChipsInPlay / totalGames;
+            
+            // Most frequent players
+            const playerGames = {};
+            games.forEach(game => {
+                game.settlements.forEach(s => {
+                    playerGames[s.name] = (playerGames[s.name] || 0) + 1;
+                });
+            });
+            const mostFrequent = Object.entries(playerGames).sort((a, b) => b[1] - a[1])[0];
+
+            // Player who purchased the most chips
+            const playerChipsPurchased = {};
+            games.forEach(game => {
+                game.settlements.forEach(s => {
+                    playerChipsPurchased[s.name] = (playerChipsPurchased[s.name] || 0) + s.chipsPurchased;
+                });
+            });
+            const biggestSpender = Object.entries(playerChipsPurchased).sort((a, b) => b[1] - a[1])[0];
+
+            // Calculate longest time at #1
+            const leadershipStats = calculateLeadershipStreak(games);
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Total Games</div>
+                    <div class="stat-value">${totalGames}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Chips Played</div>
+                    <div class="stat-value">$${totalChipsInPlay.toFixed(0)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Game Size</div>
+                    <div class="stat-value">$${avgGameSize.toFixed(0)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Entry Fees</div>
+                    <div class="stat-value">$${totalEntryFees.toFixed(2)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Tips</div>
+                    <div class="stat-value">$${totalTips.toFixed(2)}</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #ffc107;">
+                    <div class="stat-label">Most Active Player</div>
+                    <div class="stat-value" style="font-size: 1.2em;">${mostFrequent ? mostFrequent[0] : 'N/A'}</div>
+                    <div class="stat-label" style="margin-top: 5px;">${mostFrequent ? mostFrequent[1] + ' games' : ''}</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #28a745;">
+                    <div class="stat-label">Longest at #1</div>
+                    <div class="stat-value" style="font-size: 1.2em;">${leadershipStats.leader || 'N/A'}</div>
+                    <div class="stat-label" style="margin-top: 5px;">${leadershipStats.games || 0} games</div>
+                </div>
+                <div class="stat-card" style="border-left-color: #dc3545;">
+                    <div class="stat-label">Biggest Spender</div>
+                    <div class="stat-value" style="font-size: 1.2em;">${biggestSpender ? biggestSpender[0] : 'N/A'}</div>
+                    <div class="stat-label" style="margin-top: 5px;">$${biggestSpender ? biggestSpender[1].toFixed(0) : '0'} total</div>
+                </div>
+            `;
+
+            // Display position history table
+            displayPositionHistory(games);
+        }
+
+        function calculateLeadershipStreak(games) {
+            const leadershipCount = {};
+            let currentLeader = null;
+            let currentStreak = 0;
+            const longestStreaks = {};
+            
+            // Calculate cumulative standings after each game
+            const playerCumulative = {};
+            
+            games.forEach((game, index) => {
+                // Update cumulative totals
+                game.settlements.forEach(settlement => {
+                    if (!playerCumulative[settlement.name]) {
+                        playerCumulative[settlement.name] = 0;
+                    }
+                    playerCumulative[settlement.name] += settlement.netProfit;
+                });
+                
+                // Find leader after this game
+                const leader = Object.entries(playerCumulative)
+                    .sort((a, b) => b[1] - a[1])[0];
+                
+                if (leader) {
+                    const leaderName = leader[0];
+                    leadershipCount[leaderName] = (leadershipCount[leaderName] || 0) + 1;
+                    
+                    // Track consecutive leadership
+                    if (currentLeader === leaderName) {
+                        currentStreak++;
+                    } else {
+                        currentLeader = leaderName;
+                        currentStreak = 1;
+                    }
+                    
+                    longestStreaks[leaderName] = Math.max(
+                        longestStreaks[leaderName] || 0,
+                        currentStreak
+                    );
+                }
+            });
+            
+            // Find player with most games at #1
+            const longestLeader = Object.entries(leadershipCount)
+                .sort((a, b) => b[1] - a[1])[0];
+            
+            return {
+                leader: longestLeader ? longestLeader[0] : null,
+                games: longestLeader ? longestLeader[1] : 0
+            };
+        }
+
+        function displayPositionHistory(games) {
+            const positionHistoryDiv = document.getElementById('positionHistoryTable');
+            
+            if (games.length === 0) {
+                positionHistoryDiv.innerHTML = '';
+                return;
+            }
+            
+            // Calculate rankings after each game
+            const playerCumulative = {};
+            const rankingsHistory = [];
+            
+            games.forEach((game, index) => {
+                // Update cumulative totals
+                game.settlements.forEach(settlement => {
+                    if (!playerCumulative[settlement.name]) {
+                        playerCumulative[settlement.name] = 0;
+                    }
+                    playerCumulative[settlement.name] += settlement.netProfit;
+                });
+                
+                // Get rankings after this game
+                const rankings = Object.entries(playerCumulative)
+                    .sort((a, b) => b[1] - a[1])
+                    .map((entry, rank) => ({
+                        name: entry[0],
+                        profit: entry[1],
+                        rank: rank + 1
+                    }));
+                
+                const gameDate = new Date(game.date).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                
+                rankingsHistory.push({
+                    date: gameDate,
+                    gameNumber: index + 1,
+                    rankings: rankings
+                });
+            });
+            
+            // Build table
+            const allPlayers = [...new Set(games.flatMap(g => g.settlements.map(s => s.name)))];
+            
+            let tableHTML = '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
+            tableHTML += '<thead><tr style="background: #667eea; color: white;">';
+            tableHTML += '<th style="padding: 10px; text-align: left; position: sticky; left: 0; background: #667eea;">Game</th>';
+            
+            allPlayers.forEach(player => {
+                tableHTML += `<th style="padding: 10px; text-align: center; min-width: 80px;">${player}</th>`;
+            });
+            
+            tableHTML += '</tr></thead><tbody>';
+            
+            rankingsHistory.forEach((history, idx) => {
+                const rowColor = idx % 2 === 0 ? '#f8f9fa' : 'white';
+                tableHTML += `<tr style="background: ${rowColor};">`;
+                tableHTML += `<td style="padding: 10px; font-weight: bold; position: sticky; left: 0; background: ${rowColor}; border-right: 2px solid #dee2e6;">#${history.gameNumber}<br/><span style="font-size: 0.85em; color: #6c757d;">${history.date}</span></td>`;
+                
+                allPlayers.forEach(player => {
+                    const playerRanking = history.rankings.find(r => r.name === player);
+                    
+                    if (playerRanking) {
+                        let bgColor = '';
+                        let medal = '';
+                        
+                        if (playerRanking.rank === 1) {
+                            bgColor = '#ffd70020';
+                            medal = '🥇 ';
+                        } else if (playerRanking.rank === 2) {
+                            bgColor = '#c0c0c020';
+                            medal = '🥈 ';
+                        } else if (playerRanking.rank === 3) {
+                            bgColor = '#cd7f3220';
+                            medal = '🥉 ';
+                        }
+                        
+                        const profitColor = playerRanking.profit >= 0 ? '#28a745' : '#dc3545';
+                        
+                        tableHTML += `<td style="padding: 10px; text-align: center; background: ${bgColor};">`;
+                        tableHTML += `${medal}#${playerRanking.rank}<br/>`;
+                        tableHTML += `<span style="font-size: 0.85em; color: ${profitColor}; font-weight: bold;">$${playerRanking.profit.toFixed(0)}</span>`;
+                        tableHTML += `</td>`;
+                    } else {
+                        tableHTML += '<td style="padding: 10px; text-align: center; color: #adb5bd;">-</td>';
+                    }
+                });
+                
+                tableHTML += '</tr>';
+            });
+            
+            tableHTML += '</tbody></table>';
+            
+            positionHistoryDiv.innerHTML = tableHTML;
+        }
+
+        // Excel Export Functions
+        function exportToExcel() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            const yearGames = games.filter(game => new Date(game.date).getFullYear() === currentYear);
+
+            if (yearGames.length === 0) {
+                alert('No games to export');
+                return;
+            }
+
+            // Prepare data
+            let csv = 'Zagga Poker - Complete Data Export\n\n';
+            csv += 'GAME HISTORY\n';
+            csv += 'Date,Table Leader,Dealer,Entry Fee,Tips,Player,Chips Bought,Final Chips,Profit/Loss\n';
+
+            yearGames.forEach(game => {
+                const gameDate = new Date(game.date).toLocaleDateString();
+                game.settlements.forEach(settlement => {
+                    csv += `${gameDate},${game.tableLeader},${game.dealerName || game.tableLeader},${game.entryFee},${game.dealerTips || 0},${settlement.name},${settlement.chipsPurchased},${settlement.finalChips},${settlement.netProfit}\n`;
+                });
+            });
+
+            csv += '\n\nYEARLY RANKINGS\n';
+            csv += 'Rank,Player,Total Profit/Loss,Games Played,Average per Game,Total Chips Purchased\n';
+
+            const playerStats = {};
+            const playerChipsPurchased = {};
+            
+            yearGames.forEach(game => {
+                game.settlements.forEach(settlement => {
+                    if (!playerStats[settlement.name]) {
+                        playerStats[settlement.name] = { totalProfit: 0, gamesPlayed: 0 };
+                        playerChipsPurchased[settlement.name] = 0;
+                    }
+                    playerStats[settlement.name].totalProfit += settlement.netProfit;
+                    playerStats[settlement.name].gamesPlayed += 1;
+                    playerChipsPurchased[settlement.name] += settlement.chipsPurchased;
+                });
+            });
+
+            const rankings = Object.entries(playerStats)
+                .map(([name, stats]) => ({
+                    name,
+                    totalProfit: stats.totalProfit,
+                    gamesPlayed: stats.gamesPlayed,
+                    average: stats.totalProfit / stats.gamesPlayed,
+                    chipsPurchased: playerChipsPurchased[name]
+                }))
+                .sort((a, b) => b.totalProfit - a.totalProfit);
+
+            rankings.forEach((player, index) => {
+                csv += `${index + 1},${player.name},${player.totalProfit.toFixed(2)},${player.gamesPlayed},${player.average.toFixed(2)},${player.chipsPurchased.toFixed(2)}\n`;
+            });
+
+            // Add advanced statistics
+            const leadershipStats = calculateLeadershipStreak(yearGames);
+            const biggestSpender = Object.entries(playerChipsPurchased).sort((a, b) => b[1] - a[1])[0];
+
+            csv += '\n\nADVANCED STATISTICS\n';
+            csv += 'Metric,Value\n';
+            csv += `Longest at #1,${leadershipStats.leader || 'N/A'} (${leadershipStats.games} games)\n`;
+            csv += `Biggest Spender,${biggestSpender ? biggestSpender[0] : 'N/A'} ($${biggestSpender ? biggestSpender[1].toFixed(2) : '0'})\n`;
+
+            downloadCSV(csv, `Zagga_Poker_Complete_${currentYear}.csv`);
+        }
+
+        function exportHistoryToExcel() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            const yearGames = games.filter(game => new Date(game.date).getFullYear() === currentYear);
+
+            if (yearGames.length === 0) {
+                alert('No games to export');
+                return;
+            }
+
+            let csv = 'Zagga Poker - Game History\n';
+            csv += 'Date,Table Leader,Dealer,Entry Fee,Tips,Dealer Earnings,Player,Chips Bought,Final Chips,Profit/Loss\n';
+
+            yearGames.forEach(game => {
+                const gameDate = new Date(game.date).toLocaleDateString();
+                const dealerEarnings = (game.entryFee * game.settlements.length) + (game.dealerTips || 0);
+                
+                game.settlements.forEach(settlement => {
+                    csv += `${gameDate},${game.tableLeader},${game.dealerName || game.tableLeader},${game.entryFee},${game.dealerTips || 0},${dealerEarnings},${settlement.name},${settlement.chipsPurchased},${settlement.finalChips},${settlement.netProfit}\n`;
+                });
+            });
+
+            downloadCSV(csv, `Zagga_Poker_History_${currentYear}.csv`);
+        }
+
+        function exportRankingsToExcel() {
+            const currentYear = new Date().getFullYear();
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            const yearGames = games.filter(game => new Date(game.date).getFullYear() === currentYear);
+
+            if (yearGames.length === 0) {
+                alert('No games to export');
+                return;
+            }
+
+            let csv = `Zagga Poker - Yearly Rankings ${currentYear}\n\n`;
+            csv += 'Rank,Player,Total Profit/Loss,Games Played,Average per Game,Win Rate\n';
+
+            const playerStats = {};
+            yearGames.forEach(game => {
+                game.settlements.forEach(settlement => {
+                    if (!playerStats[settlement.name]) {
+                        playerStats[settlement.name] = { 
+                            totalProfit: 0, 
+                            gamesPlayed: 0,
+                            wins: 0
+                        };
+                    }
+                    playerStats[settlement.name].totalProfit += settlement.netProfit;
+                    playerStats[settlement.name].gamesPlayed += 1;
+                    if (settlement.netProfit > 0) {
+                        playerStats[settlement.name].wins += 1;
+                    }
+                });
+            });
+
+            const rankings = Object.entries(playerStats)
+                .map(([name, stats]) => ({
+                    name,
+                    totalProfit: stats.totalProfit,
+                    gamesPlayed: stats.gamesPlayed,
+                    average: stats.totalProfit / stats.gamesPlayed,
+                    winRate: (stats.wins / stats.gamesPlayed * 100)
+                }))
+                .sort((a, b) => b.totalProfit - a.totalProfit);
+
+            rankings.forEach((player, index) => {
+                csv += `${index + 1},${player.name},${player.totalProfit.toFixed(2)},${player.gamesPlayed},${player.average.toFixed(2)},${player.winRate.toFixed(1)}%\n`;
+            });
+
+            downloadCSV(csv, `Zagga_Poker_Rankings_${currentYear}.csv`);
+        }
+
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // WhatsApp Export Function
+        function shareToWhatsApp() {
+            if (!currentGameResult) {
+                alert('No game results to share. Please calculate a game first.');
+                return;
+            }
+            
+            const message = generateResultsMessage(currentGameResult);
+            
+            // Encode for URL
+            const encodedMessage = encodeURIComponent(message);
+            
+            // Try to detect mobile vs desktop
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // On mobile, open WhatsApp directly
+                const whatsappURL = `whatsapp://send?text=${encodedMessage}`;
+                window.location.href = whatsappURL;
+            } else {
+                // On desktop, copy to clipboard and show instructions
+                copyToClipboard(message);
+            }
+        }
+        
+        function copyToClipboard(text) {
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showWhatsAppModal(text);
+                }).catch(() => {
+                    // Fallback
+                    fallbackCopyToClipboard(text);
+                    showWhatsAppModal(text);
+                });
+            } else {
+                fallbackCopyToClipboard(text);
+                showWhatsAppModal(text);
+            }
+        }
+        
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+        
+        function showWhatsAppModal(message) {
+            // Create modal overlay
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                padding: 20px;
+            `;
+            
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                max-width: 600px;
+                width: 100%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            `;
+            
+            modalContent.innerHTML = `
+                <h2 style="color: #25D366; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 2em;">✅</span> Ready to Share!
+                </h2>
+                
+                <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">${escapeHtml(message)}</div>
+                
+                <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>📋 Message copied to clipboard!</strong><br/><br/>
+                    <strong>To share on WhatsApp:</strong><br/>
+                    1. Open WhatsApp on your computer<br/>
+                    2. Select a contact or group<br/>
+                    3. Press Ctrl+V (or Cmd+V on Mac) to paste<br/>
+                    4. Press Enter to send
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="openWhatsAppWeb()" style="flex: 1; padding: 15px; background: #25D366; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">
+                        📱 Open WhatsApp Web
+                    </button>
+                    <button onclick="closeWhatsAppModal()" style="flex: 1; padding: 15px; background: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">
+                        Close
+                    </button>
+                </div>
+            `;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+            
+            // Close on background click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeWhatsAppModal();
+                }
+            });
+            
+            // Store reference
+            window.currentModal = modal;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function openWhatsAppWeb() {
+            window.open('https://web.whatsapp.com', '_blank');
+            closeWhatsAppModal();
+        }
+        
+        function closeWhatsAppModal() {
+            if (window.currentModal) {
+                document.body.removeChild(window.currentModal);
+                window.currentModal = null;
+            }
+        }
+
+        function copyResultsToClipboard() {
+            if (!currentGameResult) {
+                alert('No game results to copy. Please calculate a game first.');
+                return;
+            }
+            
+            const game = currentGameResult;
+            const message = generateResultsMessage(game);
+            
+            // Try to copy to clipboard
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(message).then(() => {
+                    showCopyConfirmation();
+                }).catch(() => {
+                    fallbackCopyToClipboard(message);
+                    showCopyConfirmation();
+                });
+            } else {
+                fallbackCopyToClipboard(message);
+                showCopyConfirmation();
+            }
+        }
+
+        function generateResultsMessage(game) {
+            const gameDate = new Date(game.date).toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                month: 'long', 
+                day: 'numeric',
+                year: 'numeric'
+            });
+            
+            // Build message (same format as WhatsApp)
+            let message = `🃏 *ZAGGA POKER RESULTS*\n`;
+            message += `📅 ${gameDate}\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+            
+            // Settlement Payments
+            message += `💰 *SETTLEMENT PAYMENTS*\n\n`;
+            
+            if (game.payments && game.payments.length > 0) {
+                game.payments.forEach(payment => {
+                    message += `💵 *${payment.from}* pays *${payment.to}*\n`;
+                    message += `   Amount: $${payment.amount.toFixed(2)}\n\n`;
+                });
+            } else {
+                message += `✅ No payments needed - Everyone broke even!\n\n`;
+            }
+            
+            // Dealer Payment
+            const totalEntryFees = game.entryFee * game.settlements.length;
+            const dealerTips = game.dealerTips || 0;
+            const totalDealerPayment = totalEntryFees + dealerTips;
+            
+            if (totalDealerPayment > 0) {
+                message += `━━━━━━━━━━━━━━━━━━━━\n`;
+                message += `👑 *DEALER PAYMENT*\n\n`;
+                message += `*${game.tableLeader}* pays *${game.dealerName}*\n`;
+                if (totalEntryFees > 0) {
+                    message += `• Entry Fees: $${totalEntryFees.toFixed(2)}\n`;
+                }
+                if (dealerTips > 0) {
+                    message += `• Tips: $${dealerTips.toFixed(2)}\n`;
+                }
+                message += `*Total: $${totalDealerPayment.toFixed(2)}*\n\n`;
+            }
+            
+            // Profit/Loss Summary
+            message += `━━━━━━━━━━━━━━━━━━━━\n`;
+            message += `📊 *PROFIT & LOSS*\n`;
+            message += `_(Game results only - excludes entry fees)_\n\n`;
+            
+            const sortedResults = [...game.settlements].sort((a, b) => b.netProfit - a.netProfit);
+            
+            sortedResults.forEach((settlement, index) => {
+                let emoji = '';
+                if (index === 0 && settlement.netProfit > 0) emoji = '🥇 ';
+                else if (index === 1 && settlement.netProfit > 0) emoji = '🥈 ';
+                else if (index === 2 && settlement.netProfit > 0) emoji = '🥉 ';
+                else if (settlement.netProfit > 0) emoji = '📈 ';
+                else if (settlement.netProfit < 0) emoji = '📉 ';
+                else emoji = '➖ ';
+                
+                const sign = settlement.netProfit >= 0 ? '+' : '';
+                message += `${emoji}*${settlement.name}*: ${sign}$${settlement.netProfit.toFixed(2)}\n`;
+            });
+            
+            message += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+            message += `_Tracked with Zagga Poker_ 🎰`;
+            
+            return message;
+        }
+
+        function showCopyConfirmation() {
+            // Create temporary notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #28a745;
+                color: white;
+                padding: 20px 40px;
+                border-radius: 10px;
+                font-size: 18px;
+                font-weight: bold;
+                z-index: 10000;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                animation: fadeInOut 2s ease-in-out;
+            `;
+            notification.innerHTML = '✅ Results copied to clipboard!';
+            
+            // Add animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                    20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(notification);
+            
+            // Remove after animation
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 2000);
+        }
+
+        function showDuplicatePlayerError(playerName) {
+            // Create error notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #dc3545;
+                color: white;
+                padding: 20px 40px;
+                border-radius: 10px;
+                font-size: 18px;
+                font-weight: bold;
+                z-index: 10000;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                animation: shakeAndFade 2.5s ease-in-out;
+                text-align: center;
+                max-width: 400px;
+            `;
+            notification.innerHTML = `⚠️ Player Already in Game!<br/><span style="font-size: 14px; font-weight: normal; margin-top: 5px; display: block;">"${playerName}" is already selected</span>`;
+            
+            // Add shake animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes shakeAndFade {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                    10% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-2deg); }
+                    20% { transform: translate(-50%, -50%) scale(1) rotate(2deg); }
+                    30% { transform: translate(-50%, -50%) scale(1) rotate(-2deg); }
+                    40% { transform: translate(-50%, -50%) scale(1) rotate(2deg); }
+                    50% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+                    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                }
+            `;
+            if (!document.getElementById('shake-animation-style')) {
+                style.id = 'shake-animation-style';
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Remove after animation
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    document.body.removeChild(notification);
+                }
+            }, 2500);
+        }
+
+        // Data Sync Functions
+        function exportAllData() {
+            const games = localStorage.getItem('pokerGames') || '[]';
+            const players = localStorage.getItem('regularPlayers') || '[]';
+            
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                games: JSON.parse(games),
+                regularPlayers: JSON.parse(players)
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `ZaggaPoker_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('exportStatus').innerHTML = '<div class="alert alert-success">✅ Data exported successfully!</div>';
+            setTimeout(() => {
+                document.getElementById('exportStatus').innerHTML = '';
+            }, 3000);
+        }
+        
+        function importAllData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importData = JSON.parse(e.target.result);
+                    
+                    // Validate data structure
+                    if (!importData.games || !Array.isArray(importData.games)) {
+                        throw new Error('Invalid data format');
+                    }
+                    
+                    // Get existing data
+                    const existingGames = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+                    const existingPlayers = JSON.parse(localStorage.getItem('regularPlayers') || '[]');
+                    
+                    // Merge games (avoid duplicates by date and players)
+                    const mergedGames = [...existingGames];
+                    let newGamesCount = 0;
+                    
+                    importData.games.forEach(importGame => {
+                        const isDuplicate = existingGames.some(existing => 
+                            existing.date === importGame.date &&
+                            JSON.stringify(existing.settlements.map(s => s.name).sort()) === 
+                            JSON.stringify(importGame.settlements.map(s => s.name).sort())
+                        );
+                        
+                        if (!isDuplicate) {
+                            mergedGames.push(importGame);
+                            newGamesCount++;
+                        }
+                    });
+                    
+                    // Merge regular players (avoid duplicates)
+                    const mergedPlayers = [...new Set([...existingPlayers, ...importData.regularPlayers])];
+                    const newPlayersCount = mergedPlayers.length - existingPlayers.length;
+                    
+                    // Save merged data
+                    localStorage.setItem('pokerGames', JSON.stringify(mergedGames));
+                    localStorage.setItem('regularPlayers', JSON.stringify(mergedPlayers));
+                    
+                    // Show success message
+                    document.getElementById('importStatus').innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ Data imported successfully!<br/>
+                            Added ${newGamesCount} new game(s)<br/>
+                            Added ${newPlayersCount} new player(s)
+                        </div>
+                    `;
+                    
+                    // Refresh displays
+                    loadRankings();
+                    loadHistory();
+                    renderRegularPlayers();
+                    displayDataInfo();
+                    
+                    setTimeout(() => {
+                        document.getElementById('importStatus').innerHTML = '';
+                    }, 5000);
+                    
+                } catch (error) {
+                    document.getElementById('importStatus').innerHTML = `
+                        <div class="alert alert-warning">
+                            ❌ Error importing data: ${error.message}
+                        </div>
+                    `;
+                }
+            };
+            
+            reader.readAsText(file);
+            event.target.value = ''; // Reset file input
+        }
+        
+        function displayDataInfo() {
+            const games = JSON.parse(localStorage.getItem('pokerGames') || '[]');
+            const players = JSON.parse(localStorage.getItem('regularPlayers') || '[]');
+            
+            const currentYear = new Date().getFullYear();
+            const yearGames = games.filter(g => new Date(g.date).getFullYear() === currentYear);
+            
+            const dataSize = new Blob([JSON.stringify({ games, players })]).size;
+            const dataSizeKB = (dataSize / 1024).toFixed(2);
+            
+            const infoDiv = document.getElementById('dataInfo');
+            infoDiv.innerHTML = `
+                <strong>Current Device Data:</strong><br/><br/>
+                📊 Total Games: ${games.length} (${yearGames.length} this year)<br/>
+                👥 Regular Players: ${players.length}<br/>
+                💾 Data Size: ${dataSizeKB} KB<br/>
+                📅 Last Update: ${games.length > 0 ? new Date(games[games.length - 1].date).toLocaleDateString() : 'No games yet'}
+            `;
+        }
+
+        // PWA Installation
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallPromotion();
+        });
+
+        function showInstallPromotion() {
+            const installDiv = document.createElement('div');
+            installDiv.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 25px;
+                border-radius: 50px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                z-index: 10000;
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                max-width: 90%;
+                animation: slideUp 0.3s ease;
+            `;
+            installDiv.innerHTML = `
+                <span>📱 Install Zagga Poker on your device!</span>
+                <button style="background: white; color: #667eea; border: none; padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer;" onclick="installApp()">Install</button>
+                <button style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer;" onclick="this.parentElement.remove()">×</button>
+            `;
+            document.body.appendChild(installDiv);
+        }
+
+        async function installApp() {
+            if (!deferredPrompt) return;
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            }
+            
+            deferredPrompt = null;
+            document.querySelectorAll('div').forEach(div => {
+                if (div.textContent.includes('Install Zagga Poker')) {
+                    div.remove();
+                }
+            });
+        }
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>
